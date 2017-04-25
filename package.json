@@ -1,0 +1,34 @@
+{
+    "name": "coosy",
+    "version": "1.0.0",
+    "author": "Bernd Brassel, Olaf Chitil, Michael Hanus, Frank Huch",
+    "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
+    "synopsis": "A tool to observe functional logic computations",
+    "category": [ "Debugging" ],
+    "dependencies": {
+    },
+    "exportedModules": [ "Observe" ],
+    "compilerCompatibility": {
+        "pakcs": ">= 1.10.0, < 2.0.0"
+    },
+    "license": "BSD-3-Clause",
+    "licenseFile": "LICENSE",
+    "configModule": "Coosy.PackageConfig",
+    "executable": { "name": "coosy-gui",
+                    "main": "Coosy.GUI"
+                  },
+    "testsuite": [
+        { "src-dir": "src",
+          "options": "-v",
+          "modules":  [ "Observe" ]
+        },
+        { "src-dir": "examples",
+          "options": "-v",
+          "modules":  [ "examples" ]
+        }
+    ],
+     "source": {
+        "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/coosy.git",
+        "tag": "$version"
+    }
+}
