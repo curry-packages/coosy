@@ -1,7 +1,7 @@
 {
     "name": "coosy",
     "version": "1.0.0",
-    "author": "Bernd Brassel, Olaf Chitil, Michael Hanus, Frank Huch",
+    "author": "Bernd Brassel <bbr@informatik.uni-kiel.de>, Olaf Chitil <O.Chitil@kent.ac.uk>, Michael Hanus <mh@informatik.uni-kiel.de>, Frank Huch <fhu@informatik.uni-kiel.de>",
     "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
     "synopsis": "A tool to observe functional logic computations",
     "category": [ "Debugging" ],
