@@ -39,6 +39,7 @@ data Event = Demand Int   EventID EventID EventID
            | LogVar       EventID EventID EventID
            --             ownID   parent  pred
            | Separator
+ deriving Eq
 
 type Trace = [Event]
 
