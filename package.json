@@ -6,6 +6,7 @@
     "synopsis": "A tool to observe functional logic computations",
     "category": [ "Debugging" ],
     "dependencies": {
+        "abstract-curry": ">= 2.0.0"
     },
     "exportedModules": [ "Observe" ],
     "compilerCompatibility": {
