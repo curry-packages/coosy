@@ -16,7 +16,7 @@ module Coosy.Trace (logDir,
                   showEvent
                   ) where
 
-import ReadNumeric(readInt)
+import Numeric (readInt)
 
 logDir = "COOSYLOGS"
 
@@ -103,25 +103,25 @@ showInt i = if i<0 then '-':show (negate i) else show i
 readEvent :: String -> Event
 readEvent str =
    case readInt str of
-     Just (ref,_:dv:str1) ->
+     [(ref,_:dv:str1)] ->
            if dv=='L' || dv=='F'
               then
                 case readInt str1 of
-                  Just (parent,_:str2) ->
-                    case readInt str2 of 
-                      Just (pred,_) -> 
+                  [(parent,_:str2)] ->
+                    case readInt str2 of
+                      [(pred,_)] ->
                         if dv=='L'
                            then LogVar ref parent pred
-                           else Fun    ref parent pred 
+                           else Fun    ref parent pred
            else
             case readInt str1 of
-              Just (argNr,_:str2) ->
+              [(argNr,_:str2)] ->
                 case readInt str2 of
-                  Just (parent,_:str3) ->
-                    case readInt str3 of 
-                      Just (pred,str4) ->
+                  [(parent,_:str3)] ->
+                    case readInt str3 of
+                      [(pred,str4)] ->
                         if dv=='D'
-                          then Demand argNr ref parent pred 
+                          then Demand argNr ref parent pred
                           else Value argNr (core str4) ref parent pred
 
 core (_:xs) = core' xs

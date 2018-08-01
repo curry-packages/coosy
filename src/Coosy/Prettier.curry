@@ -7,11 +7,11 @@ module Coosy.Prettier
   , (<+>), (</>), folddoc, spread, stack, bracket, (<+/>)
   ) where
 
-import Maybe
+import Data.Maybe
 
 infixr 6 <>,<+>,</>,<+/>
 
-data DOC = NIL          -- nil 
+data DOC = NIL          -- nil
          | BESIDE DOC DOC  -- beside
          | NEST Int DOC
          | TEXT String
@@ -64,8 +64,8 @@ x <+/> y = x <> (CHOOSE (text " ") sep) <> y
 fill :: [DOC] -> DOC
 fill [] = nil
 fill [x] = x
-fill (x:y:zs) = 
-  CHOOSE (flatten x <+> fill (flatten y : zs))               
+fill (x:y:zs) =
+  CHOOSE (flatten x <+> fill (flatten y : zs))
     (x </> fill (y : zs))
 -}
 
@@ -78,7 +78,7 @@ group x = case flatten x of
 
 flatten :: DOC -> Maybe DOC
 flatten NIL = Just NIL
-flatten (BESIDE x y)= 
+flatten (BESIDE x y)=
    flatten x >>- \x' ->
    flatten y >>- \y' ->
    Just (BESIDE x' y')
@@ -120,7 +120,7 @@ pretty w x = layout (best w 0 x)
 -- everything into a single line except where line breaks are forced.
 prettyFlat :: DOC -> String
 prettyFlat d = go 0 d ""
-  
+
 go :: Int -> DOC -> String -> String
 go _ NIL = id
 go i (BESIDE d1 d2) = go i d1 . go i d2

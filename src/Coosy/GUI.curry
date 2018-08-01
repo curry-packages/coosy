@@ -4,8 +4,8 @@
 
 module Coosy.GUI (main) where
 
-import Directory
-import FilePath  ( (</>) )
+import System.Directory
+import System.FilePath  ( (</>) )
 import GUI
 
 import Observe(clearLogFile)
@@ -98,18 +98,18 @@ addlineGUI =
      return []
 
 appendValues _ _ [] = done
-appendValues rtxt wp (s:ss) 
+appendValues rtxt wp (s:ss)
   = if elem (chr 7) (s:ss) then appendGray rtxt wp (s:ss)
-      else appendStyledValue rtxt (s:ss) [Fg Black] wp 
+      else appendStyledValue rtxt (s:ss) [Fg Black] wp
 
 appendGray _ _ [] = done
-appendGray rtxt wp (s:ss) 
+appendGray rtxt wp (s:ss)
   = appendStyledValue rtxt gray [Fg Gray] wp >> appendBlack rtxt wp rest
   where
     (gray,rest) = span (/= (chr 7)) (s:ss)
 
 appendBlack _ _ [] = done
-appendBlack rtxt wp (_:ss) = appendValue rtxt black wp 
+appendBlack rtxt wp (_:ss) = appendValue rtxt black wp
                              >> appendGray rtxt wp rest
   where
     (black,_:rest) = span (/= (chr 7)) ss

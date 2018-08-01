@@ -6,15 +6,15 @@ module Coosy.Derive(derive,deriveFile) where
 
 import AbstractCurry.Types
 import AbstractCurry.Files
-import AbstractCurry.Select(tconsArgsOfType)
-import System(getProgName)
-import Char(isSpace)
+import AbstractCurry.Select (tconsArgsOfType)
+import System.Environment   (getProgName)
+import Data.Char            (isSpace)
 
 derive :: IO ()
 derive = do
   progname <- getProgName
   putStr $ "Program where type observers should be added (default: "++progname++"): "
-  answer <- getLine 
+  answer <- getLine
   let fileName = if all isSpace answer
                  then progname
                  else answer
@@ -34,9 +34,9 @@ deriveFile progfile = do
 
 addOTypes :: String -> IO ()
 addOTypes fileName = do
-  progLines <- readFile (fileName++".curry") 
+  progLines <- readFile (fileName++".curry")
   writeFile (fileName++".curry.bak") progLines
-  writeFile (fileName++".curry") 
+  writeFile (fileName++".curry")
             (unlines (takeWhile (/=coosyComment) $ lines progLines))
   prog <- readCurry fileName
   appendFile (fileName++".curry")
@@ -55,12 +55,12 @@ deriveTypeDecl (CType (_,name) _ vs cs _) =
              ++ brackets (arity>0) (name ++ derivePatArgs arity) ++"\n"++
     concatMap (deriveCCons ('o':name) vs) cs ++"\n"
   where arity = length vs
-deriveTypeDecl (CTypeSyn (_,name) _ vs t) 
+deriveTypeDecl (CTypeSyn (_,name) _ vs t)
   = ('o':name) ++concatMap deriveTypeVar vs ++ "= "++deriveTypeExpr t++"\n"
 
 deriveCCons :: String -> [CTVarIName] -> CConsDecl -> String
 deriveCCons tname vs (CCons _ _ (_,cname) _ texps) =
-  tname ++deriveTypeVarPattern vs (usedVars texps) ++  
+  tname ++deriveTypeVarPattern vs (usedVars texps) ++
   ' ':brackets (arity>0) (cname ++ derivePatArgs arity) ++
   " = o" ++ show arity ++ concatMap deriveTypeExpr texps ++
   ' ':show cname ++ ' ':cname++derivePatArgs arity++"\n"
@@ -76,7 +76,7 @@ deriveTypeExpr t@(CTApply tc ta) =
         deriveConsTypeExpr
         (tconsArgsOfType t)
 
-deriveConsTypeExpr ((_,name),ts) 
+deriveConsTypeExpr ((_,name),ts)
   | name=="[]" = " (oList"++concatMap deriveTypeExpr ts++")"
   | ti>0       = " ("++tupleOName ti++concatMap deriveTypeExpr ts++")"
   | otherwise  = ' ':brackets (not (null ts))
@@ -93,7 +93,7 @@ derivePatArgs n = concatMap (\ i->' ':'x':show i) [1..n]
 
 deriveTypeVarPattern :: [CTVarIName] -> [CTVarIName] -> String
 deriveTypeVarPattern [] _ = ""
-deriveTypeVarPattern (v:vs) used 
+deriveTypeVarPattern (v:vs) used
   = (if elem v used then (deriveTypeVar v) else " _") ++
     deriveTypeVarPattern vs used
 
