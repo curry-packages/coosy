@@ -7,8 +7,6 @@ module Coosy.Prettier
   , (<+>), (</>), folddoc, spread, stack, bracket, (<+/>)
   ) where
 
-import Data.Maybe
-
 infixr 6 <>,<+>,</>,<+/>
 
 data DOC = NIL          -- nil
@@ -79,11 +77,11 @@ group x = case flatten x of
 flatten :: DOC -> Maybe DOC
 flatten NIL = Just NIL
 flatten (BESIDE x y)=
-   flatten x >>- \x' ->
-   flatten y >>- \y' ->
+   flatten x >>= \x' ->
+   flatten y >>= \y' ->
    Just (BESIDE x' y')
 flatten (NEST i x) =
-   flatten x >>- \x' ->
+   flatten x >>= \x' ->
    Just (NEST i x')
 flatten (TEXT s) = Just (TEXT s)
 flatten LINE = Nothing           -- abort
