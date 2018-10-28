@@ -9,7 +9,8 @@
   "licenseFile": "LICENSE",
   "dependencies": {
     "abstract-curry": " >= 3.0.0",
-    "gui"           : " >= 3.0.0"
+    "gui"           : " >= 3.0.0",
+    "base"          : " >= 2.0.0"
   },
   "compilerCompatibility": {
     "pakcs": " >= 2.0.0"
