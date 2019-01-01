@@ -1,4 +1,4 @@
-import Findall
+import Control.Findall
 import Observe
 
 -- Place n queens on a chessboard so that no queen can capture another queen:

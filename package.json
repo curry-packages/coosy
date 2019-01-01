@@ -8,21 +8,23 @@
   "license": "BSD-3-Clause",
   "licenseFile": "LICENSE",
   "dependencies": {
-    "abstract-curry": " >= 2.0.0",
-    "gui": " >= 2.0.0"
+      "base"           : ">= 1.0.0, < 2.0.0",
+      "abstract-curry" : ">= 2.0.0",
+      "gui"            : ">= 2.0.0",
+      "searchtree"     : ">= 1.0.0"
   },
   "compilerCompatibility": {
-    "pakcs": " >= 2.0.0"
+      "pakcs": " >= 2.0.0"
   },
   "source": {
-    "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/coosy.git",
-    "tag": "$version"
+      "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/coosy.git",
+      "tag": "$version"
   },
   "exportedModules": [ "Observe" ],
   "configModule": "Coosy.PackageConfig",
   "executable": {
-    "name": "coosy-gui",
-    "main": "Coosy.GUI"
+      "name": "coosy-gui",
+      "main": "Coosy.GUI"
   },
   "testsuite": [ {
                  "src-dir": "src",
