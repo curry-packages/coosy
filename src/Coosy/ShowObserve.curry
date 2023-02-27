@@ -1,7 +1,8 @@
 module Coosy.ShowObserve where
 
-import Directory
-import List(intersperse,isPrefixOf)
+import Data.List ( intersperse, isPrefixOf )
+
+import System.Directory
 
 import Coosy.Prettier as Prettier
 import Coosy.Trace
@@ -12,9 +13,9 @@ main = readAndPrintEvents putStr ShowLogVarBinds
 readAndPrintEvents :: (String -> IO ()) -> ViewConf -> IO ()
 readAndPrintEvents outstr viewConf =
   getDirectoryContents logDir >>= \files ->
-  mapIO_ (\label -> readFile (logFile label) >>= \eventStr ->
-                    printCatEvents outstr viewConf (label,readTrace eventStr))
-         (eventLabels files)
+  mapM_ (\label -> readFile (logFile label) >>= \eventStr ->
+                   printCatEvents outstr viewConf (label,readTrace eventStr))
+        (eventLabels files)
 
 eventLabels files =
     let eventFiles = filter (isPrefixOf logFilePrefix) files
@@ -27,10 +28,10 @@ printCatEvents :: (String -> IO ()) -> ViewConf -> (String,Trace)
 printCatEvents outstr viewConf (label,events) = 
     outstr label >> outstr "\n" >>
     outstr (take (length label) (repeat '-')) >>
-    mapIO_ (\t -> outstr "\n" >>
-                  mapIO_ (\s -> outstr s >> outstr "\n")
-                         ((reverse . (map (prettyShowTerm viewConf))) t))
-           (catTerms events) >>
+    mapM_ (\t -> outstr "\n" >>
+                  mapM_ (\s -> outstr s >> outstr "\n")
+                        ((reverse . (map (prettyShowTerm viewConf))) t))
+          (catTerms events) >>
     outstr "\n"
 
 catTerms :: Trace -> [[Term]]

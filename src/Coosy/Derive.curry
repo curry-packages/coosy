@@ -2,18 +2,25 @@
 -- Derivor for COOSy observation types
 ------------------------------------------------------------------------------
 
-module Coosy.Derive(derive,deriveFile) where
+module Coosy.Derive ( derive, deriveFile )
+ where
+
+import Control.Monad        ( when )
+import Data.Char            ( isSpace )
+import Data.List            ( intercalate )
+import System.Environment   ( getProgName )
 
 import AbstractCurry.Types
 import AbstractCurry.Files
-import AbstractCurry.Select(tconsArgsOfType)
-import System(getProgName)
-import Char(isSpace)
+import AbstractCurry.Select ( tconsArgsOfType )
+import System.CurryPath     ( stripCurrySuffix )
+import System.Process       ( sleep )
 
 derive :: IO ()
 derive = do
   progname <- getProgName
-  putStr $ "Program where type observers should be added (default: "++progname++"): "
+  putStr $
+    "Program where type observers should be added (default: "++progname++"): "
   answer <- getLine 
   let fileName = if all isSpace answer
                  then progname
@@ -24,25 +31,28 @@ derive = do
 -- Derives observers to a given program file:
 deriveFile :: String -> IO String
 deriveFile progfile = do
-  let progName = takeWhile (/='.') progfile
+  let progName = stripCurrySuffix progfile
   addOTypes progName
-  return  $ "Observer functions have been added to '"++progName++"'.\n\n"++
-            "A backup of the original file has been written to:\n"++
-            progName++".curry.bak\n\n"++
-            "Don't forget to recompile the program and to reload it"++
-            " into your editor!"
+  return $ unlines
+    [ "Observer functions have been added to:", progName, ""
+    , "A backup of the original file has been written to:"
+    , progName ++ ".curry.bak", ""
+    , "Don't forget to recompile the program and to reload it into your editor!"
+    ]
 
 addOTypes :: String -> IO ()
 addOTypes fileName = do
-  progLines <- readFile (fileName++".curry") 
-  writeFile (fileName++".curry.bak") progLines
-  writeFile (fileName++".curry") 
-            (unlines (takeWhile (/=coosyComment) $ lines progLines))
+  progtext <- readFile (fileName ++ ".curry") 
+  writeFile (fileName ++ ".curry.bak") progtext
+  when (coosyComment `elem` lines progtext) $ do
+    writeFile (fileName ++ ".curry") 
+              (unlines (takeWhile (/=coosyComment) $ lines progtext))
+    sleep 1 -- wait for file to be written (has caused problems...)
   prog <- readCurry fileName
-  appendFile (fileName++".curry")
-    ("\n\n"++coosyComment++"\n\n"++deriveProg prog)
+  appendFile (fileName ++ ".curry")
+    ("\n\n" ++ coosyComment ++ "\n\n" ++ deriveProg prog)
  where
-  coosyComment = "--oTypes added by Coosy"
+  coosyComment = "-- oTypes added by Coosy"
 
 deriveProg :: CurryProg -> String
 deriveProg (CurryProg _ _ _ _ _ typeDecls _ _) =
@@ -50,32 +60,41 @@ deriveProg (CurryProg _ _ _ _ _ typeDecls _ _) =
 
 deriveTypeDecl :: CTypeDecl -> String
 deriveTypeDecl (CType (_,name) _ vs cs _) =
-  'o':name ++ " ::" ++ concatMap (\i->" Observer x"++show i++" ->") [1..arity]
-             ++ " Observer "
-             ++ brackets (arity>0) (name ++ derivePatArgs arity) ++"\n"++
+  'o':name ++ " ::" ++ datactxt
+           ++ concatMap (\i -> " Observer x"++show i++" ->") [1..arity]
+           ++ " Observer "
+           ++ brackets (arity>0) (name ++ derivePatArgs arity) ++"\n"++
     concatMap (deriveCCons ('o':name) vs) cs ++"\n"
-  where arity = length vs
-deriveTypeDecl (CTypeSyn (_,name) _ vs t) 
-  = ('o':name) ++concatMap deriveTypeVar vs ++ "= "++deriveTypeExpr t++"\n"
+ where arity = length vs
+       datactxt | arity == 0 = ""
+                | otherwise  = brackets (arity>0)
+                                 (intercalate ", "
+                                    (map (\i -> "Data x" ++ show i)
+                                         [1 .. arity])) ++ " =>"
+deriveTypeDecl (CTypeSyn (_,name) _ vs t) =
+  ('o':name) ++ concatMap deriveTypeVar vs ++ "= " ++ deriveTypeExpr t ++ "\n"
+deriveTypeDecl (CNewType _ _ _ _ _) = error "Cannot handle type synonyms"
 
 deriveCCons :: String -> [CTVarIName] -> CConsDecl -> String
-deriveCCons tname vs (CCons _ _ (_,cname) _ texps) =
+deriveCCons tname vs (CCons (_,cname) _ texps) =
   tname ++deriveTypeVarPattern vs (usedVars texps) ++  
   ' ':brackets (arity>0) (cname ++ derivePatArgs arity) ++
   " = o" ++ show arity ++ concatMap deriveTypeExpr texps ++
   ' ':show cname ++ ' ':cname++derivePatArgs arity++"\n"
  where arity = length texps
+deriveCCons _ _ (CRecord _ _ _) = error "Cannot handle record constructors"
 
 deriveTypeExpr :: CTypeExpr -> String
 deriveTypeExpr (CTVar index) = deriveTypeVar index
 deriveTypeExpr (CTCons tc) = deriveConsTypeExpr (tc,[])
 deriveTypeExpr (CFuncType t1 t2) =
   ' ':'(':dropWhile (==' ') (deriveTypeExpr t1)++" ~>"++ deriveTypeExpr t2++")"
-deriveTypeExpr t@(CTApply tc ta) =
+deriveTypeExpr t@(CTApply _ _) =
   maybe (error "Cannot derive type applications")
         deriveConsTypeExpr
         (tconsArgsOfType t)
 
+deriveConsTypeExpr :: ((a,String), [AbstractCurry.Types.CTypeExpr]) -> String
 deriveConsTypeExpr ((_,name),ts) 
   | name=="[]" = " (oList"++concatMap deriveTypeExpr ts++")"
   | ti>0       = " ("++tupleOName ti++concatMap deriveTypeExpr ts++")"
@@ -115,8 +134,8 @@ tupleOName arity | arity==2  = "oPair"
                  | otherwise = 'o' : (show arity ++ "Tuple")
 
 countComma :: Int -> String -> Int
-countComma _ [] = 0
-countComma n [c] = if c==')' then n else 0
+countComma _ []         = 0
+countComma n [c]        = if c==')' then n else 0
 countComma n (',':s1:s) = countComma (n+1) (s1:s)
 
 brackets :: Bool -> String -> String

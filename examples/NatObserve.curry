@@ -2,9 +2,11 @@ import Observe
 
 data Nat = O | S Nat
 
+coin :: Nat
 coin = O
 coin = S O
 
+plus :: Nat -> Nat -> Nat
 plus O x     = x
 plus (S x) y = S (plus x y)
 
@@ -13,5 +15,5 @@ plus (S x) y = S (plus x y)
 
 -- Then you can observe plus by:
 
--- main = observe (oNat ~> oNat ~> oNat) " + " plus O coin
+-- main = observeG (oNat ~~> oNat ~~> oNat) " + " plus O coin
 

@@ -16,15 +16,17 @@ module Coosy.Trace (logDir,
                   showEvent
                   ) where
 
-import ReadNumeric(readInt)
-
+logDir :: String
 logDir = "COOSYLOGS"
 
+logFilePrefix :: String
 logFilePrefix = "TRAIL."
 
-logFile label = logDir++"/TRAIL."++label
+logFile :: String -> String
+logFile label = logDir ++ "/TRAIL." ++ label
 
-logFileClear = logDir++"/CLEAR"
+logFileClear :: String
+logFileClear = logDir ++ "/CLEAR"
 
 type Label = String
 
@@ -71,7 +73,7 @@ isDemand :: Event -> Bool
 isDemand (Value  _ _ _ _ _) = False
 isDemand (Demand _ _ _ _) = True
 isDemand (Fun  _ _ _) = False
-isDeamnd (LogVar _ _ _) = False
+isDemand (LogVar _ _ _) = False
 
 isLogVar :: Event -> Bool
 isLogVar (Value  _ _ _ _ _) = False
@@ -86,16 +88,17 @@ isFun (Fun    _ _ _) = True
 isFun (LogVar _ _ _) = False
 
 
+showEvent :: Event -> String
 showEvent (Demand argNr eventID parent pred) =
-    (show eventID)++'\t':'D':(showInt argNr)++'\t':(showInt parent)++
+    (show eventID) ++ '\t':'D':(showInt argNr) ++ '\t':(showInt parent) ++
     '\t':showInt pred
 showEvent (Value arity constr eventID parent pred) =
-    (show eventID)++'\t':'V':(showInt arity)++'\t':(showInt parent)++
-    '\t':(showInt pred)++(show constr)
+    (show eventID) ++ '\t':'V':(showInt arity) ++ '\t':(showInt parent) ++
+    '\t':(showInt pred) ++ (show constr)
 showEvent (Fun eventID parent pred) =
-    (show eventID)++'\t':'F':(showInt parent)++'\t':(showInt pred)
+    (show eventID) ++ '\t':'F':(showInt parent) ++ '\t':(showInt pred)
 showEvent (LogVar eventID parent pred) =
-    (show eventID)++'\t':'L':(showInt parent)++'\t':(showInt pred)
+    (show eventID) ++ '\t':'L':(showInt parent) ++ '\t':(showInt pred)
 
 showInt :: Int -> String
 showInt i = if i<0 then '-':show (negate i) else show i
@@ -123,7 +126,12 @@ readEvent str =
                         if dv=='D'
                           then Demand argNr ref parent pred 
                           else Value argNr (core str4) ref parent pred
+ where
+  readInt s = case reads s of
+    [(i,s)] -> Just (i::Int,s)
+    _       -> Nothing
 
+core :: [a] -> [a]
 core (_:xs) = core' xs
   where core' [_] = []
         core' (x:y:ys) = x:core' (y:ys)

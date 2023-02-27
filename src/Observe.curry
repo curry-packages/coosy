@@ -1,42 +1,45 @@
-module Observe (observe,
-                oLit,
-                oInt,
-                oBool,
-                oChar,
-                oFloat,
-                oSuccess,
-                oOpaque,
-                oOpaqueConstr,
-                oList,
-                oString,
-                oPair,
-                oTriple,
-                o4Tuple,
-                o5Tuple,
-                oMaybe,
-                oEither,
-                oFun,
-                (~>),
-                o0,o1,o2,o3,o4,o5,
-                clearLogFile,
-                Observer,
-                derive
-               ) where
+------------------------------------------------------------------------------
+--- The `Oberserve` library containing combinators to observe data.
+---
+--- @author Bernd Brassle, Olaf Chitil, Michael Hanus, Frank Huch
+--- @version February 2023
+------------------------------------------------------------------------------
 
-import IOExts
-import ReadNumeric(readInt)
-import ReadShowTerm
-import System (system)
-import Unsafe
+module Observe
+  (observe, observeG,
+   oLit, oInt, oBool, oChar, oFloat,
+   oOpaque,
+   oOpaqueConstr,
+   oList,
+   oString,
+   oPair, oTriple, o4Tuple, o5Tuple,
+   oMaybe,
+   oEither,
+   oFun, (~>), oFunFG, (~~>), oFunG, (~~~>),
+   o0,o1,o2,o3,o4,o5,
+   clearLogFile,
+   Observer,
+   derive
+  )
+ where
 
-import Coosy.Derive
+import System.IO.Unsafe ( isVar, spawnConstraint, unsafePerformIO )
+
+import Data.Assoc       ( getAssoc, setAssoc )
+import System.Process   ( system )
+
+import Coosy.Derive     ( derive )
 import Coosy.Trace
 
 
-infixr 5 ~>
+infixr 5 ~>, ~~>, ~~~>
 
 type Observer a = (a -> Label -> EventID -> [EventID] -> a)
 
+------------------------------------------------------------------------------
+-- Auxiliary definitions.
+
+stateName :: String
 stateName = "coosy.state"
 
 getNewID :: IO EventID
@@ -44,9 +47,9 @@ getNewID = do
    maybeStr <- getAssoc stateName
    maybe (setAssoc stateName "1" >>
           return 0)
-         (\str -> let Just (n,"") = readInt str in
-                  setAssoc stateName (show (n+1)) >>
-                  return n)
+         (\str -> case reads str of
+                    [(n,"")] -> setAssoc stateName (show (n+1)) >> return n
+                    _        -> error "Observe.getNewID: illegal string")
          maybeStr
 
 getPred :: EventID -> [EventID] -> (EventID,[EventID])
@@ -67,11 +70,13 @@ recordEvent label event parent preds
        return (eventID, newLogVar)
     where newLogVar free
 
+clearLogFile :: IO ()
 clearLogFile = do
-   system ("touch "++logFile ""++"; rm "++logFile "*")
+   system $ "touch " ++ logFile "" ++ "; rm " ++ logFile "*"
    setAssoc stateName (show 0)
 
-clearFileCheck = 
+clearFileCheck :: IO ()
+clearFileCheck =
   let clearFile = logFileClear in
    readFile clearFile >>= \clearStr ->
    if clearStr == "1"
@@ -79,161 +84,256 @@ clearFileCheck =
           writeFile clearFile ""
      else return ()
 
-observe :: Observer a -> String -> a -> a
+------------------------------------------------------------------------------
+--- The basic operation to observe the evaluation of data structures.
+--- It has a `Data` context so that it can also observe the instantiation
+--- of free variables occurring in data structures.
+observe :: Data a => Observer a -> String -> a -> a
 observe observeA label x = initialObserver observeA 0 x label (-1) preds
-    where preds free
+ where preds free
 
-initialObserver :: Observer a -> Int -> Observer a 
+initialObserver :: Data a => Observer a -> Int -> Observer a 
 initialObserver observeA argNr x label parent preds = unsafePerformIO $ do
-      clearFileCheck
-      observer' observeA argNr x label parent preds
+  clearFileCheck
+  observerIO observeA argNr x label parent preds
 
-observer :: Observer a -> Int -> Observer a
+observer :: Data a => Observer a -> Int -> Observer a
 observer observeA argNr x label parent preds = unsafePerformIO $
-      observer' observeA argNr x label parent preds
+  observerIO observeA argNr x label parent preds
 
-observer' :: Observer a -> Int -> a -> Label -> EventID -> [EventID] -> IO a
-observer' observeA argNr x l parent preds 
-  = do (eventID, newPreds) <- recordEvent l (Demand argNr) parent preds
-       if isVar x 
-         then 
-         do (logVarID,logVarPreds) <- recordEvent l LogVar eventID newPreds
-            spawnConstraint 
-              (seq (ensureNotFree x) (observeA x l logVarID logVarPreds =:= x))
-              (return x)
-         else return $ observeA x l eventID newPreds
+observerIO :: Data a =>
+              Observer a -> Int -> a -> Label -> EventID -> [EventID] -> IO a
+observerIO observeA argNr x l parent preds = do
+  (eventID, newPreds) <- recordEvent l (Demand argNr) parent preds
+  if isVar x 
+    then 
+      do (logVarID,logVarPreds) <- recordEvent l LogVar eventID newPreds
+         spawnConstraint 
+           (seq (ensureNotFree x) (observeA x l logVarID logVarPreds =:= x))
+           (return x)
+    else return $ observeA x l eventID newPreds
 
--- Don't use oLit for type success!!
-oLit :: Observer _
-oLit l = o0 (showTerm l) l
 
+--- The basic operation to observe the evaluation of ground data structures.
+--- It does not require a `Data` context but it can not observe
+--- the instantiation of free variables occurring in data structures.
+--- Thus, it has to be ensured that free variables do not occur in the
+--- observed structures, otherwise this observer always suspends.
+observeG :: Observer a -> String -> a -> a
+observeG observeA label x =
+  initialObserverGround observeA 0 x label (-1) preds
+ where preds free
+
+initialObserverGround :: Observer a -> Int -> Observer a
+initialObserverGround observeA argNr x label parent preds = unsafePerformIO $ do
+  clearFileCheck
+  observerGroundIO observeA argNr x label parent preds
+
+observerGround :: Observer a -> Int -> Observer a
+observerGround observeA argNr x label parent preds = unsafePerformIO $
+  observerGroundIO observeA argNr x label parent preds
+
+observerGroundIO ::
+             Observer a -> Int -> a -> Label -> EventID -> [EventID] -> IO a
+observerGroundIO observeA argNr x l parent preds = do
+  (eventID, newPreds) <- recordEvent l (Demand argNr) parent preds
+  (ensureNotFree x) `seq` return (observeA x l eventID newPreds)
+
+------------------------------------------------------------------------------
+-- Combinators to construct observers for various kinds of data.
+
+-- An observer for literals.
+oLit :: Show a => Observer a
+oLit l = o0 (show l) l
+
+-- An observer for integers.
 oInt :: Observer Int 
 oInt = oLit
 
+-- An observer for Booleans.
 oBool :: Observer Bool
 oBool = oLit
 
+-- An observer for chacacters.
 oChar :: Observer Char
 oChar = oLit
 
+-- An observer for floats.
 oFloat :: Observer Float 
 oFloat = oLit
 
-oSuccess  :: Observer Success 
-oSuccess _ = o0 "success" success
-
+-- An opaque observer which does not observe the values.
+-- This might be useful to observe polymorphic types.
 oOpaque :: Observer _
 oOpaque x = o0 "#" x
 
 oOpaqueConstr :: String -> Observer _
 oOpaqueConstr constr x = o0 constr x
 
-oList :: Observer a -> Observer [a]
-oList _ [] = o0 "[]" []
-oList observeA (x:xs) =
-      o2 observeA (oList observeA) "(:)" (:) x xs
+-- An observer combinator for lists.
+oList :: Data a => Observer a -> Observer [a]
+oList _        []     = o0 "[]" []
+oList observeA (x:xs) = o2 observeA (oList observeA) "(:)" (:) x xs
 
+-- An observer for strings.
 oString :: Observer String
 oString = oList oChar
 
-oPair  :: Observer a -> Observer b -> Observer (a,b)
+-- An observer combinator for pairs.
+oPair  :: (Data a, Data b) => Observer a -> Observer b -> Observer (a,b)
 oPair observeA observeB (x,y) =
-      o2 observeA observeB "(,)" (\a b -> (a,b)) x y
+  o2 observeA observeB "(,)" (\a b -> (a,b)) x y
 
-oTriple :: Observer a -> Observer b -> Observer c -> Observer (a,b,c)
+-- An observer combinator for triples.
+oTriple :: (Data a, Data b, Data c) =>
+           Observer a -> Observer b -> Observer c -> Observer (a,b,c)
 oTriple observeA observeB observeC (x,y,z) =
-      o3 observeA observeB observeC "(,,)" (\a b c -> (a,b,c)) x y z
+  o3 observeA observeB observeC "(,,)" (\a b c -> (a,b,c)) x y z
 
-o4Tuple :: Observer a -> Observer b -> Observer c -> Observer d
+-- An observer combinator for quadruples.
+o4Tuple :: (Data a, Data b, Data c, Data d) =>
+           Observer a -> Observer b -> Observer c -> Observer d
                                                   -> Observer (a,b,c,d)
 o4Tuple observeA observeB observeC observeD (x1,x2,x3,x4) =
-      o4 observeA observeB observeC observeD "(,,,)"
-         (\a b c d -> (a,b,c,d)) x1 x2 x3 x4
+  o4 observeA observeB observeC observeD "(,,,)"
+     (\a b c d -> (a,b,c,d)) x1 x2 x3 x4
 
-o5Tuple :: Observer a -> Observer b -> Observer c -> Observer d -> Observer e
+-- An observer combinator for 5-tuples.
+o5Tuple :: (Data a, Data b, Data c, Data d, Data e) =>
+           Observer a -> Observer b -> Observer c -> Observer d -> Observer e
                                                   -> Observer (a,b,c,d,e)
 o5Tuple observeA observeB observeC observeD observeE (x1,x2,x3,x4,x5) =
-      o5 observeA observeB observeC observeD observeE "(,,,,)"
-         (\a b c d e -> (a,b,c,d,e)) x1 x2 x3 x4 x5
+  o5 observeA observeB observeC observeD observeE "(,,,,)"
+     (\a b c d e -> (a,b,c,d,e)) x1 x2 x3 x4 x5
 
-oMaybe :: Observer a -> Observer (Maybe a)
-oMaybe _ Nothing = o0 "Nothing" Nothing
+-- An observer combinator for the `Maybe` type.
+oMaybe :: Data a => Observer a -> Observer (Maybe a)
+oMaybe _        Nothing  = o0 "Nothing" Nothing
 oMaybe observeA (Just x) = o1 observeA "Just" Just x
 
-oEither :: Observer a -> Observer b -> Observer (Either a b)
+-- An observer combinator for the `Either` type.
+oEither :: (Data a, Data b) => Observer a -> Observer b -> Observer (Either a b)
 oEither observeA _ (Left a)  = o1 observeA "Left" Left a
 oEither _ observeB (Right b) = o1 observeB "Right" Right b
 
-oIO :: Observer a -> Observer (IO a)
+-- An observer combinator for the `IO` type.
+oIO :: Data a => Observer a -> Observer (IO a)
 oIO observeA action parent preds label = 
        action >>= \res -> o1 observeA "<IO>" return res parent preds label
 
-oFun :: Observer a -> Observer b -> Observer (a -> b)        
+-- Construct an observer for functions where the argument and result might be
+-- a free variable.
+oFun :: (Data a, Data b) => Observer a -> Observer b -> Observer (a -> b)
 oFun observeA observeB f label parent preds arg =
-  (unsafePerformIO $
-    do (eventID,newPreds) <- recordEvent label Fun parent preds
-       return (\x -> (observer observeB 2
-                        (f (observer observeA 1 x label eventID newPreds))
-                        label eventID newPreds)))
+  (unsafePerformIO $ do
+    (eventID,newPreds) <- recordEvent label Fun parent preds
+    return (\x -> (observer observeB 2
+                     (f (observer observeA 1 x label eventID newPreds))
+                     label eventID newPreds)))
   arg
       
-(~>) :: Observer a -> Observer b -> Observer (a -> b) 
+-- Construct an observer for functions where the argument and result might be
+-- a free variable.
+(~>) :: (Data a, Data b) => Observer a -> Observer b -> Observer (a -> b)
 a ~> b = oFun a b
 
-o0 :: String -> Observer _
-o0 constrStr x label parent preds =
-  unsafePerformIO $
-    do recordEvent label (Value 0 constrStr) parent preds
-       return x
+-- Construct an observer for functions where the argument might be
+-- a free variable and the result is always non-free (e.g., a functional value).
+oFunFG :: Data a => Observer a -> Observer b -> Observer (a -> b)
+oFunFG observeA observeB f label parent preds arg =
+  (unsafePerformIO $ do
+    (eventID,newPreds) <- recordEvent label Fun parent preds
+    return (\x -> observerGround observeB 2
+                    (f (observer observeA 1 x label eventID newPreds))
+                    label eventID newPreds))
+  arg
 
-o1 :: Observer a -> String 
-      -> (a -> b) -> a -> Label -> EventID -> [EventID] -> b
-o1 observeA constrStr constr x label parent preds =
-  unsafePerformIO $
-    do (eventID,newPreds) <- recordEvent label (Value 1 constrStr) parent preds
-       return (constr (observer observeA 1 x label eventID newPreds))
+-- Construct an observer for functions where the argument might be
+-- a free variable and the result is always non-free (e.g., a functional value).
+(~~>) :: Data a => Observer a -> Observer b -> Observer (a -> b)
+a ~~> b = oFunFG a b
+
+-- Construct an observer for functions where the argument and the result
+-- are never free variables.
+oFunG :: Observer a -> Observer b -> Observer (a -> b)
+oFunG observeA observeB f label parent preds arg =
+  (unsafePerformIO $ do
+    (eventID,newPreds) <- recordEvent label Fun parent preds
+    return (\x -> observerGround observeB 2
+                    (f (observerGround observeA 1 x label eventID newPreds))
+                    label eventID newPreds))
+  arg
+
+-- Construct an observer for functions where the argument and the result
+-- are never free variables.
+(~~~>) :: Observer a -> Observer b -> Observer (a -> b)
+a ~~~> b = oFunG a b
+
+------------------------------------------------------------------------------
+-- Observers for constructors.
+
+-- An observer combinator for 0-ary constructors.
+o0 :: String -> Observer _
+o0 constrStr x label parent preds = unsafePerformIO $ do
+  recordEvent label (Value 0 constrStr) parent preds
+  return x
+
+-- An observer combinator for unary constructors.
+o1 :: Data a => Observer a -> String
+   -> (a -> b) -> a -> Label -> EventID -> [EventID] -> b
+o1 observeA constrStr constr x label parent preds = unsafePerformIO $ do
+  (eventID,newPreds) <- recordEvent label (Value 1 constrStr) parent preds
+  return (constr (observer observeA 1 x label eventID newPreds))
    
-o2 :: Observer a -> Observer b -> String -> 
+-- An observer combinator for binary constructors.
+o2 :: (Data a, Data b) => Observer a -> Observer b -> String ->
       (a -> b -> c) -> a -> b -> Label -> EventID -> [EventID] ->  c
 o2 observeA observeB constrStr constr x1 x2 label parent preds =
-  unsafePerformIO $
-    do (eventID,newPreds) <- recordEvent label (Value 2 constrStr) parent preds
-       return (constr (observer observeA 1 x1 label eventID newPreds)
-                      (observer observeB 2 x2 label eventID newPreds))
+  unsafePerformIO $ do
+    (eventID,newPreds) <- recordEvent label (Value 2 constrStr) parent preds
+    return (constr (observer observeA 1 x1 label eventID newPreds)
+                   (observer observeB 2 x2 label eventID newPreds))
     
-o3 :: Observer a -> Observer b -> Observer c -> String ->
+-- An observer combinator for ternary constructors.
+o3 :: (Data a, Data b, Data c) =>
+      Observer a -> Observer b -> Observer c -> String ->
       (a -> b -> c -> d) -> 
       a -> b -> c -> Label -> EventID -> [EventID] -> d
 o3 observeA observeB observeC constrStr constr x1 x2 x3 label parent preds =
-  unsafePerformIO $
-    do (eventID,newPreds) <- recordEvent label (Value 3 constrStr) parent preds
-       return (constr (observer observeA 1 x1 label eventID newPreds)
-                      (observer observeB 2 x2 label eventID newPreds)
-                      (observer observeC 3 x3 label eventID newPreds))
+  unsafePerformIO $ do
+    (eventID,newPreds) <- recordEvent label (Value 3 constrStr) parent preds
+    return (constr (observer observeA 1 x1 label eventID newPreds)
+                   (observer observeB 2 x2 label eventID newPreds)
+                   (observer observeC 3 x3 label eventID newPreds))
 
-o4 :: Observer a -> Observer b -> Observer c -> Observer d -> String ->
+-- An observer combinator for constructors of arity 4.
+o4 :: (Data a, Data b, Data c, Data d) =>
+      Observer a -> Observer b -> Observer c -> Observer d -> String ->
       (a -> b -> c -> d -> e) -> 
       a -> b -> c -> d -> Label -> EventID -> [EventID] -> e
 o4 observeA observeB observeC observeD constrStr constr x1 x2 x3 x4
   label parent preds =
-  unsafePerformIO $
-    do (eventID,newPreds) <- recordEvent label (Value 4 constrStr) parent preds
-       return (constr (observer observeA 1 x1 label eventID newPreds)
-                      (observer observeB 2 x2 label eventID newPreds)
-                      (observer observeC 3 x3 label eventID newPreds)
-                      (observer observeD 4 x4 label eventID newPreds))
+  unsafePerformIO $ do
+    (eventID,newPreds) <- recordEvent label (Value 4 constrStr) parent preds
+    return (constr (observer observeA 1 x1 label eventID newPreds)
+                   (observer observeB 2 x2 label eventID newPreds)
+                   (observer observeC 3 x3 label eventID newPreds)
+                   (observer observeD 4 x4 label eventID newPreds))
 
-o5 :: Observer a -> Observer b -> Observer c -> Observer d -> 
+-- An observer combinator for constructors of arity 5.
+o5 :: (Data a, Data b, Data c, Data d, Data e) =>
+      Observer a -> Observer b -> Observer c -> Observer d ->
       Observer e -> String ->
       (a -> b -> c -> d -> e -> f) ->
       a -> b -> c -> d -> e -> Label -> EventID -> [EventID] -> f
 o5 observeA observeB observeC observeD observeE constrStr constr
   x1 x2 x3 x4 x5 label parent preds =
-  unsafePerformIO $
-    do (eventID,newPreds) <- recordEvent label (Value 5 constrStr) parent preds
-       return (constr (observer observeA 1 x1 label eventID newPreds)
-                      (observer observeB 2 x2 label eventID newPreds)
-                      (observer observeC 3 x3 label eventID newPreds)
-                      (observer observeD 4 x4 label eventID newPreds)
-                      (observer observeE 5 x5 label eventID newPreds))
+  unsafePerformIO $ do
+    (eventID,newPreds) <- recordEvent label (Value 5 constrStr) parent preds
+    return (constr (observer observeA 1 x1 label eventID newPreds)
+                   (observer observeB 2 x2 label eventID newPreds)
+                   (observer observeC 3 x3 label eventID newPreds)
+                   (observer observeD 4 x4 label eventID newPreds)
+                   (observer observeE 5 x5 label eventID newPreds))
 
+------------------------------------------------------------------------------

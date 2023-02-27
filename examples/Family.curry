@@ -15,6 +15,7 @@ import Observe
 
 data Person = Christine | Maria | Monica | Alice | Susan |
               Antony | Bill | John | Frank | Peter | Andrew
+ deriving Show
 
 female Christine  = True
 female Maria      = True
@@ -44,7 +45,7 @@ mother Monica Susan     = True
 mother Monica Peter     = True
 mother Alice Andrew     = True
 
-father = observe (oLit ~> oLit ~> oLit) "father" father'
+father = observeG (oLit ~~> oLit ~~> oLit) "father" father'
 
 father' f c | let m free in (married m f && mother m c) =:= True  = True
 

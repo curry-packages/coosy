@@ -4,15 +4,15 @@
 
 module Coosy.GUI (main) where
 
-import Directory
-import FilePath  ( (</>) )
-import GUI
+import System.Directory
+import System.FilePath  ( (</>) )
+import Graphics.UI
 
-import Observe(clearLogFile)
-import Coosy.ShowObserve(readAndPrintEvents,ViewConf(..))
-import Coosy.Trace(logDir,logFileClear)
-import Coosy.Derive(deriveFile)
-import Coosy.PackageConfig ( packagePath)
+import Observe             ( clearLogFile )
+import Coosy.ShowObserve   ( readAndPrintEvents, ViewConf(..) )
+import Coosy.Trace         ( logDir, logFileClear )
+import Coosy.Derive        ( deriveFile )
+import Coosy.PackageConfig ( packagePath )
 
 coosyHome :: String
 coosyHome = packagePath
@@ -23,7 +23,7 @@ main :: IO ()
 main = do
   logexist <- doesDirectoryExist logDir
   if logexist
-    then done
+    then return ()
     else do
       putStrLn $ ">>> Creating new directory '"++logDir++"' for Coosy log files"
       createDirectory logDir
@@ -69,15 +69,15 @@ addlineGUI =
      logVarSel <- getValue logVarCheck wp
      catch (readAndPrintEvents (\s -> appendValues rtxt wp s)
                                (toViewConf logVarSel))
-           (\e -> putStrLn (showError e) >> appendValue rtxt failMsg wp)
+           (\e -> putStrLn (show e) >> appendValue rtxt failMsg wp)
 
    addObservers wp = do
      filename <- getOpenFileWithTypes curryFileTypes
      if null filename
-       then done
+       then return ()
        else do
          msg <- catch (deriveFile filename)
-                      (\e -> return ("Error occurred: " ++ showError e))
+                      (\e -> return ("Error occurred: " ++ show e))
          setValue rtxt msg wp
 
    showBusy handler wp = do
@@ -97,18 +97,18 @@ addlineGUI =
      setValue rtxt helptext wp
      return []
 
-appendValues _ _ [] = done
+appendValues _ _ [] = return ()
 appendValues rtxt wp (s:ss) 
   = if elem (chr 7) (s:ss) then appendGray rtxt wp (s:ss)
       else appendStyledValue rtxt (s:ss) [Fg Black] wp 
 
-appendGray _ _ [] = done
+appendGray _ _ [] = return ()
 appendGray rtxt wp (s:ss) 
   = appendStyledValue rtxt gray [Fg Gray] wp >> appendBlack rtxt wp rest
   where
     (gray,rest) = span (/= (chr 7)) (s:ss)
 
-appendBlack _ _ [] = done
+appendBlack _ _ [] = return ()
 appendBlack rtxt wp (_:ss) = appendValue rtxt black wp 
                              >> appendGray rtxt wp rest
   where
@@ -119,14 +119,17 @@ toViewConf "1" = ShowLogVarBinds
 toViewConf "0" = HideLogVarBinds
 
 -- Curry file types:
+curryFileTypes :: [(String,String)]
 curryFileTypes = [("Curry Files",".curry"),
                   ("Literate Curry files",".lcurry")]
 
 
+initMsg :: String
 initMsg =
    "IMPORTANT NOTE:\n\n" ++
    "Don't forget to press 'clear' before you observe a new program execution!"
 
+failMsg :: String
 failMsg =
    "Failure occurred during reading of trace file!\n\n"++
    "Press 'clear' button and run again your program."
