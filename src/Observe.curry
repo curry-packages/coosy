@@ -85,8 +85,7 @@ observerG :: Observer a -> Int -> Observer a
 observerG observeA argNr x label parent preds = unsafePerformIO $
   observerGIO observeA argNr x label parent preds
 
-observerGIO ::
-             Observer a -> Int -> a -> Label -> EventID -> [EventID] -> IO a
+observerGIO :: Observer a -> Int -> a -> Label -> EventID -> [EventID] -> IO a
 observerGIO observeA argNr x l parent preds = do
   (eventID, newPreds) <- recordEvent l (Demand argNr) parent preds
   (ensureNotFree x) `seq` return (observeA x l eventID newPreds)
@@ -173,7 +172,7 @@ oEither _ observeB (Right b) = o1 observeB "Right" Right b
 -- An observer combinator for the `IO` type.
 oIO :: Data a => Observer a -> Observer (IO a)
 oIO observeA action parent preds label = 
-       action >>= \res -> o1 observeA "<IO>" return res parent preds label
+  action >>= \res -> o1 observeA "<IO>" return res parent preds label
 
 -- Construct an observer for functions where the argument and result might be
 -- a free variable.

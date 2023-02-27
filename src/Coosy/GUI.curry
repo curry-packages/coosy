@@ -14,9 +14,6 @@ import Coosy.Trace         ( logDir, logFileClear )
 import Coosy.Derive        ( deriveFile )
 import Coosy.PackageConfig ( packagePath )
 
-coosyHome :: String
-coosyHome = packagePath
-
 ------------------------------------------------------------------------------
 
 main :: IO ()
@@ -28,11 +25,12 @@ main = do
       putStrLn $ ">>> Creating new directory '"++logDir++"' for Coosy log files"
       createDirectory logDir
       writeFile logFileClear ""
-  writeFile (logDir </> "SRCPATH") (coosyHome</>"src\n") -- path info for PAKCS
+  -- write path info for PAKCS:
+  writeFile (logDir </> "SRCPATH") (packagePath </> "src\n")
   writeFile (logDir </> "READY") "" -- for synchronization with PAKCS
   runGUI "COOSy" addlineGUI
 
--- The COOSy GUI (parameter: home dir of COOSy to find the help files):
+-- The COOSy GUI.
 addlineGUI :: Widget
 addlineGUI =
  Col [] [
@@ -88,31 +86,36 @@ addlineGUI =
      setConfig status (Background "green") wp
 
    help wp = do
-     helptext <- readFile (coosyHome </> "include" </> "Help.txt")
+     helptext <- readFile (packagePath </> "include" </> "Help.txt")
      setValue rtxt helptext wp
      return []
 
    about wp = do
-     helptext <- readFile (coosyHome </> "README.md")
+     helptext <- readFile (packagePath </> "README.md")
      setValue rtxt helptext wp
      return []
 
+appendValues :: WidgetRef -> GuiPort -> String -> IO ()
 appendValues _ _ [] = return ()
-appendValues rtxt wp (s:ss) 
-  = if elem (chr 7) (s:ss) then appendGray rtxt wp (s:ss)
-      else appendStyledValue rtxt (s:ss) [Fg Black] wp 
+appendValues rtxt wp (s:ss) =
+  if elem (chr 7) (s:ss) then appendGray rtxt wp (s:ss)
+                         else appendStyledValue rtxt (s:ss) [Fg Black] wp 
 
+appendGray :: WidgetRef -> GuiPort -> String -> IO ()
 appendGray _ _ [] = return ()
-appendGray rtxt wp (s:ss) 
-  = appendStyledValue rtxt gray [Fg Gray] wp >> appendBlack rtxt wp rest
-  where
-    (gray,rest) = span (/= (chr 7)) (s:ss)
+appendGray rtxt wp (s:ss) = do
+  appendStyledValue rtxt gray [Fg Gray] wp
+  appendBlack rtxt wp rest
+ where
+  (gray,rest) = span (/= (chr 7)) (s:ss)
 
+appendBlack :: WidgetRef -> GuiPort -> String -> IO ()
 appendBlack _ _ [] = return ()
-appendBlack rtxt wp (_:ss) = appendValue rtxt black wp 
-                             >> appendGray rtxt wp rest
-  where
-    (black,_:rest) = span (/= (chr 7)) ss
+appendBlack rtxt wp (_:ss) = do
+  appendValue rtxt black wp 
+  appendGray rtxt wp rest
+ where
+  (black,_:rest) = span (/= (chr 7)) ss
 
 toViewConf :: String -> ViewConf
 toViewConf "1" = ShowLogVarBinds

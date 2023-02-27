@@ -1,20 +1,21 @@
 
-module Coosy.Trace (logDir,
-                  logFilePrefix,
-                  logFile,
-                  logFileClear,
-                  Label,
-                  EventID,
-                  Event(..),
-                  Trace,
-                  getRef,
-                  isValue,
-                  isDemand,
-                  getPred,
-                  getParent,
-                  readTrace,
-                  showEvent
-                  ) where
+module Coosy.Trace
+  ( logDir,
+    logFilePrefix,
+    logFile,
+    logFileClear,
+    Label,
+    EventID,
+    Event(..),
+    Trace,
+    getRef,
+    isValue,
+    isDemand,
+    getPred,
+    getParent,
+    readTrace,
+    showEvent
+  ) where
 
 logDir :: String
 logDir = "COOSYLOGS"
