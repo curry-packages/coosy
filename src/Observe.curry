@@ -37,50 +37,6 @@ infixr 5 ~>, ~~>, ~~~>
 type Observer a = (a -> Label -> EventID -> [EventID] -> a)
 
 ------------------------------------------------------------------------------
--- Auxiliary definitions.
-
-globalEventID :: GlobalT EventID
-globalEventID = globalT "Mod.gt" 0
-
-getNewID :: IO EventID
-getNewID = do
-   n <- readGlobalT globalEventID
-   writeGlobalT globalEventID (n+1)
-   return n
-
-getPred :: EventID -> [EventID] -> (EventID,[EventID])
-getPred p xs | isVar xs  = (p,xs)
-             | otherwise = getPred (head xs) (tail xs)
-
-writeToTraceFile :: Label -> Event -> IO ()
-writeToTraceFile label event =
-  appendFile (logFile label) (showEvent event ++ "\n")
-
-recordEvent :: Label -> (EventID -> EventID -> EventID -> Event) ->
-               EventID -> [EventID] -> IO (EventID,[EventID])
-recordEvent label event parent preds = do
-  eventID <- getNewID
-  let (pred,logVar) = getPred parent preds 
-  doSolve (logVar =:= (eventID:newLogVar))
-  writeToTraceFile label (event eventID parent pred)
-  return (eventID, newLogVar)
- where newLogVar free
-
-clearLogFile :: IO ()
-clearLogFile = do
-   system $ "touch " ++ logFile "" ++ "; rm " ++ logFile "*"
-   writeGlobalT globalEventID 0
-
-clearFileCheck :: IO ()
-clearFileCheck =
-  let clearFile = logFileClear in
-   readFile clearFile >>= \clearStr ->
-   if clearStr == "1"
-     then do writeGlobalT globalEventID 0
-             writeFile clearFile ""
-     else return ()
-
-------------------------------------------------------------------------------
 --- The basic operation to observe the evaluation of data structures.
 --- It has a `Data` context so that it can also observe the instantiation
 --- of free variables occurring in data structures.
@@ -117,23 +73,25 @@ observerIO observeA argNr x l parent preds = do
 --- observed structures, otherwise this observer always suspends.
 observeG :: Observer a -> String -> a -> a
 observeG observeA label x =
-  initialObserverGround observeA 0 x label (-1) preds
+  initialObserverG observeA 0 x label (-1) preds
  where preds free
 
-initialObserverGround :: Observer a -> Int -> Observer a
-initialObserverGround observeA argNr x label parent preds = unsafePerformIO $ do
+initialObserverG :: Observer a -> Int -> Observer a
+initialObserverG observeA argNr x label parent preds = unsafePerformIO $ do
   clearFileCheck
-  observerGroundIO observeA argNr x label parent preds
+  observerGIO observeA argNr x label parent preds
 
-observerGround :: Observer a -> Int -> Observer a
-observerGround observeA argNr x label parent preds = unsafePerformIO $
-  observerGroundIO observeA argNr x label parent preds
+observerG :: Observer a -> Int -> Observer a
+observerG observeA argNr x label parent preds = unsafePerformIO $
+  observerGIO observeA argNr x label parent preds
 
-observerGroundIO ::
+observerGIO ::
              Observer a -> Int -> a -> Label -> EventID -> [EventID] -> IO a
-observerGroundIO observeA argNr x l parent preds = do
+observerGIO observeA argNr x l parent preds = do
   (eventID, newPreds) <- recordEvent l (Demand argNr) parent preds
   (ensureNotFree x) `seq` return (observeA x l eventID newPreds)
+
+------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
 -- Combinators to construct observers for various kinds of data.
@@ -239,7 +197,7 @@ oFunFG :: Data a => Observer a -> Observer b -> Observer (a -> b)
 oFunFG observeA observeB f label parent preds arg =
   (unsafePerformIO $ do
     (eventID,newPreds) <- recordEvent label Fun parent preds
-    return (\x -> observerGround observeB 2
+    return (\x -> observerG observeB 2
                     (f (observer observeA 1 x label eventID newPreds))
                     label eventID newPreds))
   arg
@@ -255,8 +213,8 @@ oFunG :: Observer a -> Observer b -> Observer (a -> b)
 oFunG observeA observeB f label parent preds arg =
   (unsafePerformIO $ do
     (eventID,newPreds) <- recordEvent label Fun parent preds
-    return (\x -> observerGround observeB 2
-                    (f (observerGround observeA 1 x label eventID newPreds))
+    return (\x -> observerG observeB 2
+                    (f (observerG observeA 1 x label eventID newPreds))
                     label eventID newPreds))
   arg
 
@@ -331,5 +289,49 @@ o5 observeA observeB observeC observeD observeE constrStr constr
                    (observer observeC 3 x3 label eventID newPreds)
                    (observer observeD 4 x4 label eventID newPreds)
                    (observer observeE 5 x5 label eventID newPreds))
+
+------------------------------------------------------------------------------
+-- Auxiliary definitions.
+
+globalEventID :: GlobalT EventID
+globalEventID = globalT "Mod.gt" 0
+
+getNewID :: IO EventID
+getNewID = do
+   n <- readGlobalT globalEventID
+   writeGlobalT globalEventID (n+1)
+   return n
+
+getPred :: EventID -> [EventID] -> (EventID,[EventID])
+getPred p xs | isVar xs  = (p,xs)
+             | otherwise = getPred (head xs) (tail xs)
+
+writeToTraceFile :: Label -> Event -> IO ()
+writeToTraceFile label event =
+  appendFile (logFile label) (showEvent event ++ "\n")
+
+recordEvent :: Label -> (EventID -> EventID -> EventID -> Event) ->
+               EventID -> [EventID] -> IO (EventID,[EventID])
+recordEvent label event parent preds = do
+  eventID <- getNewID
+  let (pred,logVar) = getPred parent preds 
+  doSolve (logVar =:= (eventID:newLogVar))
+  writeToTraceFile label (event eventID parent pred)
+  return (eventID, newLogVar)
+ where newLogVar free
+
+clearLogFile :: IO ()
+clearLogFile = do
+   system $ "touch " ++ logFile "" ++ "; rm " ++ logFile "*"
+   writeGlobalT globalEventID 0
+
+clearFileCheck :: IO ()
+clearFileCheck =
+  let clearFile = logFileClear in
+   readFile clearFile >>= \clearStr ->
+   if clearStr == "1"
+     then do writeGlobalT globalEventID 0
+             writeFile clearFile ""
+     else return ()
 
 ------------------------------------------------------------------------------
