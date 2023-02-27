@@ -40,7 +40,7 @@ ex6 = (observeG ((oInt ~~> oInt ~~> oInt) ~~~> oInt ~~> oList oInt ~~> oInt)
 -- Observe all evaluations of a higher-order function (foldr):
 ex7 :: Int
 ex7 = (observeG ((oInt ~~> oInt ~~> oInt) ~~~> oInt ~~> oList oInt ~~> oInt)
-                "foldr*" foldr) (*) 0 [1..10]
+                "foldr*" foldr) (*) 1 [1..10]
 
 -- Observe the evaluation of a string.
 ex8 :: String

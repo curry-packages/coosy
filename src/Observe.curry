@@ -25,7 +25,7 @@ module Observe
 
 import System.IO.Unsafe ( isVar, spawnConstraint, unsafePerformIO )
 
-import Data.Assoc       ( getAssoc, setAssoc )
+import Data.Global      ( GlobalT, globalT, readGlobalT, writeGlobalT )
 import System.Process   ( system )
 
 import Coosy.Derive     ( derive )
@@ -39,49 +39,45 @@ type Observer a = (a -> Label -> EventID -> [EventID] -> a)
 ------------------------------------------------------------------------------
 -- Auxiliary definitions.
 
-stateName :: String
-stateName = "coosy.state"
+globalEventID :: GlobalT EventID
+globalEventID = globalT "Mod.gt" 0
 
 getNewID :: IO EventID
 getNewID = do
-   maybeStr <- getAssoc stateName
-   maybe (setAssoc stateName "1" >>
-          return 0)
-         (\str -> case reads str of
-                    [(n,"")] -> setAssoc stateName (show (n+1)) >> return n
-                    _        -> error "Observe.getNewID: illegal string")
-         maybeStr
+   n <- readGlobalT globalEventID
+   writeGlobalT globalEventID (n+1)
+   return n
 
 getPred :: EventID -> [EventID] -> (EventID,[EventID])
 getPred p xs | isVar xs  = (p,xs)
              | otherwise = getPred (head xs) (tail xs)
 
 writeToTraceFile :: Label -> Event -> IO ()
-writeToTraceFile label event 
-  = appendFile (logFile label) (showEvent event ++"\n")
+writeToTraceFile label event =
+  appendFile (logFile label) (showEvent event ++ "\n")
 
 recordEvent :: Label -> (EventID -> EventID -> EventID -> Event) ->
                EventID -> [EventID] -> IO (EventID,[EventID])
-recordEvent label event parent preds 
-  = do eventID <- getNewID
-       let (pred,logVar) = getPred parent preds 
-       doSolve (logVar =:= (eventID:newLogVar))
-       writeToTraceFile label (event eventID parent pred)
-       return (eventID, newLogVar)
-    where newLogVar free
+recordEvent label event parent preds = do
+  eventID <- getNewID
+  let (pred,logVar) = getPred parent preds 
+  doSolve (logVar =:= (eventID:newLogVar))
+  writeToTraceFile label (event eventID parent pred)
+  return (eventID, newLogVar)
+ where newLogVar free
 
 clearLogFile :: IO ()
 clearLogFile = do
    system $ "touch " ++ logFile "" ++ "; rm " ++ logFile "*"
-   setAssoc stateName (show 0)
+   writeGlobalT globalEventID 0
 
 clearFileCheck :: IO ()
 clearFileCheck =
   let clearFile = logFileClear in
    readFile clearFile >>= \clearStr ->
    if clearStr == "1"
-     then setAssoc stateName (show 0) >>
-          writeFile clearFile ""
+     then do writeGlobalT globalEventID 0
+             writeFile clearFile ""
      else return ()
 
 ------------------------------------------------------------------------------
