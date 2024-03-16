@@ -1,4 +1,4 @@
-import Control.AllValues
+import Control.Search.Unsafe ( allValues )
 import Observe
 
 -- Place n queens on a chessboard so that no queen can capture another queen:

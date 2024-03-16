@@ -1,6 +1,6 @@
 {
   "name": "coosy",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "author": "Bernd Brassel <bbr@informatik.uni-kiel.de>, Olaf Chitil <O.Chitil@kent.ac.uk>, Michael Hanus <mh@informatik.uni-kiel.de>, Frank Huch <fhu@informatik.uni-kiel.de>",
   "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
   "synopsis": "A tool to observe functional logic computations",
@@ -8,18 +8,17 @@
   "license": "BSD-3-Clause",
   "licenseFile": "LICENSE",
   "dependencies": {
-      "base"           : ">= 3.0.0, < 4.0.0",
+      "base"           : ">= 3.2.0, < 4.0.0",
       "abstract-curry" : ">= 3.0.0, < 4.0.0",
       "currypath"      : ">= 3.0.0, < 4.0.0",
       "directory"      : ">= 3.0.0, < 4.0.0",
       "filepath"       : ">= 3.0.0, < 4.0.0",
       "global"         : ">= 3.0.0, < 4.0.0",
       "gui"            : ">= 3.0.0, < 4.0.0",
-      "process"        : ">= 3.0.0, < 4.0.0",
-      "allvalues"      : ">= 3.0.0, < 4.0.0"
+      "process"        : ">= 3.0.0, < 4.0.0"
   },
   "source": {
-      "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/coosy.git",
+      "git": "https://github.com/curry-packages/coosy.git",
       "tag": "$version"
   },
   "exportedModules": [ "Observe" ],
