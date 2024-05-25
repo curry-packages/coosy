@@ -1,6 +1,6 @@
 {
   "name": "coosy",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "author": "Bernd Brassel <bbr@informatik.uni-kiel.de>, Olaf Chitil <O.Chitil@kent.ac.uk>, Michael Hanus <mh@informatik.uni-kiel.de>, Frank Huch <fhu@informatik.uni-kiel.de>",
   "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
   "synopsis": "A tool to observe functional logic computations",
@@ -8,7 +8,7 @@
   "license": "BSD-3-Clause",
   "licenseFile": "LICENSE",
   "dependencies": {
-    "abstract-curry": " >= 3.0.0",
+    "abstract-curry": " >= 4.0.0, < 5.0.0",
     "gui"           : " >= 3.0.0",
     "base"          : " >= 2.0.0"
   },
