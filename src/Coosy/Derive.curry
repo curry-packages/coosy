@@ -59,7 +59,7 @@ deriveTypeDecl (CTypeSyn (_,name) _ vs t)
   = ('o':name) ++concatMap deriveTypeVar vs ++ "= "++deriveTypeExpr t++"\n"
 
 deriveCCons :: String -> [CTVarIName] -> CConsDecl -> String
-deriveCCons tname vs (CCons _ _ (_,cname) _ texps) =
+deriveCCons tname vs (CCons (_,cname) _ texps) =
   tname ++deriveTypeVarPattern vs (usedVars texps) ++
   ' ':brackets (arity>0) (cname ++ derivePatArgs arity) ++
   " = o" ++ show arity ++ concatMap deriveTypeExpr texps ++
@@ -115,8 +115,8 @@ tupleOName arity | arity==2  = "oPair"
                  | otherwise = 'o' : (show arity ++ "Tuple")
 
 countComma :: Int -> String -> Int
-countComma _ [] = 0
-countComma n [c] = if c==')' then n else 0
+countComma _ []         = 0
+countComma n [c]        = if c==')' then n else 0
 countComma n (',':s1:s) = countComma (n+1) (s1:s)
 
 brackets :: Bool -> String -> String

@@ -7,7 +7,7 @@ append []     ys = ys
 append (x:xs) ys = x : append xs ys
 
 
-last :: [a] -> a
+last :: Data a => [a] -> a
 last xs | append ys [x] =:= xs
         = x  where x,ys free
 

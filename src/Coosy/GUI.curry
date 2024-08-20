@@ -6,7 +6,8 @@ module Coosy.GUI (main) where
 
 import System.Directory
 import System.FilePath  ( (</>) )
-import GUI
+import Graphics.UI
+import Control.Applicative ( when )
 
 import Observe(clearLogFile)
 import Coosy.ShowObserve(readAndPrintEvents,ViewConf(..))
@@ -22,9 +23,7 @@ coosyHome = packagePath
 main :: IO ()
 main = do
   logexist <- doesDirectoryExist logDir
-  if logexist
-    then done
-    else do
+  when (not logexist) $ do
       putStrLn $ ">>> Creating new directory '"++logDir++"' for Coosy log files"
       createDirectory logDir
       writeFile logFileClear ""
@@ -73,9 +72,7 @@ addlineGUI =
 
    addObservers wp = do
      filename <- getOpenFileWithTypes curryFileTypes
-     if null filename
-       then done
-       else do
+     when (not (null filename)) $ do
          msg <- catch (deriveFile filename)
                       (\e -> return ("Error occurred: " ++ showError e))
          setValue rtxt msg wp
@@ -97,18 +94,18 @@ addlineGUI =
      setValue rtxt helptext wp
      return []
 
-appendValues _ _ [] = done
+appendValues _ _ [] = return ()
 appendValues rtxt wp (s:ss)
   = if elem (chr 7) (s:ss) then appendGray rtxt wp (s:ss)
       else appendStyledValue rtxt (s:ss) [Fg Black] wp
 
-appendGray _ _ [] = done
+appendGray _ _ [] = return ()
 appendGray rtxt wp (s:ss)
   = appendStyledValue rtxt gray [Fg Gray] wp >> appendBlack rtxt wp rest
   where
     (gray,rest) = span (/= (chr 7)) (s:ss)
 
-appendBlack _ _ [] = done
+appendBlack _ _ [] = return ()
 appendBlack rtxt wp (_:ss) = appendValue rtxt black wp
                              >> appendGray rtxt wp rest
   where
@@ -132,3 +129,6 @@ failMsg =
    "Press 'clear' button and run again your program."
 
 ------------------------------------------------------------------------------
+
+showError :: IOError -> String
+showError e = "Error occurred: " ++ show e

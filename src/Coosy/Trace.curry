@@ -18,12 +18,16 @@ module Coosy.Trace (logDir,
 
 import Numeric (readInt)
 
+logDir :: String
 logDir = "COOSYLOGS"
 
+logFilePrefix :: String
 logFilePrefix = "TRAIL."
 
+logFile :: Label -> String
 logFile label = logDir++"/TRAIL."++label
 
+logFileClear :: String
 logFileClear = logDir++"/CLEAR"
 
 type Label = String
@@ -124,6 +128,7 @@ readEvent str =
                           then Demand argNr ref parent pred
                           else Value argNr (core str4) ref parent pred
 
+core :: [a] -> [a]
 core (_:xs) = core' xs
   where core' [_] = []
         core' (x:y:ys) = x:core' (y:ys)

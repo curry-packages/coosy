@@ -10,7 +10,8 @@
   "dependencies": {
     "abstract-curry": " >= 4.0.0, < 5.0.0",
     "gui"           : " >= 3.0.0",
-    "base"          : " >= 2.0.0"
+    "base"          : " >= 2.0.0",
+    "assoc-legacy"  : " >= 1.0.0"
   },
   "compilerCompatibility": {
     "pakcs": " >= 2.0.0"
