@@ -4,6 +4,7 @@
 
 module Coosy.GUI (main) where
 
+import Control.Monad       ( unless )
 import System.FilePath     ( (</>) )
 import Graphics.UI
 
@@ -64,12 +65,10 @@ addlineGUI =
 
    addObservers wp = do
      filename <- getOpenFileWithTypes curryFileTypes
-     if null filename
-       then return ()
-       else do
-         msg <- catch (deriveFile filename)
-                      (\e -> return ("Error occurred: " ++ show e))
-         setValue rtxt msg wp
+     unless (null filename) $ do
+       msg <- catch (deriveFile filename)
+                    (\e -> return $ "Error occurred: " ++ show e)
+       setValue rtxt msg wp
 
    showBusy handler wp = do
      setValue status "Status: running" wp

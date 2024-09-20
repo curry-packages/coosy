@@ -5,7 +5,7 @@
 module Coosy.Derive ( derive, deriveFile )
  where
 
-import Control.Monad        ( when )
+import Control.Monad        ( unless, when )
 import Data.Char            ( isSpace )
 import Data.List            ( intercalate )
 import System.Environment   ( getProgName )
@@ -13,7 +13,7 @@ import System.Environment   ( getProgName )
 import AbstractCurry.Types
 import AbstractCurry.Files
 import AbstractCurry.Select ( tconsArgsOfType )
-import System.CurryPath     ( stripCurrySuffix )
+import System.CurryPath     ( runModuleActionQuiet, stripCurrySuffix )
 import System.Process       ( sleep )
 
 derive :: IO ()
@@ -32,7 +32,7 @@ derive = do
 deriveFile :: String -> IO String
 deriveFile progfile = do
   let progName = stripCurrySuffix progfile
-  addOTypes progName
+  runModuleActionQuiet addOTypes progName
   return $ unlines
     [ "Observer functions have been added to:", progName, ""
     , "A backup of the original file has been written to:"
@@ -42,15 +42,15 @@ deriveFile progfile = do
 
 addOTypes :: String -> IO ()
 addOTypes fileName = do
-  progtext <- readFile (fileName ++ ".curry") 
-  writeFile (fileName ++ ".curry.bak") progtext
+  let curryfile = fileName ++ ".curry"
+  progtext <- readFile curryfile
+  writeFile (curryfile ++ ".bak") progtext
   when (coosyComment `elem` lines progtext) $ do
-    writeFile (fileName ++ ".curry") 
-              (unlines (takeWhile (/=coosyComment) $ lines progtext))
+    writeFile curryfile
+              (unlines (takeWhile (/= coosyComment) $ lines progtext))
     sleep 1 -- wait for file to be written (has caused problems...)
   prog <- readCurry fileName
-  appendFile (fileName ++ ".curry")
-    ("\n\n" ++ coosyComment ++ "\n\n" ++ deriveProg prog)
+  appendFile curryfile ("\n\n" ++ coosyComment ++ "\n\n" ++ deriveProg prog)
  where
   coosyComment = "-- oTypes added by Coosy"
 
