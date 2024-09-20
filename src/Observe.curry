@@ -2,7 +2,7 @@
 --- The `Oberserve` library containing combinators to observe data.
 ---
 --- @author Bernd Brassle, Olaf Chitil, Michael Hanus, Frank Huch
---- @version February 2023
+--- @version September 2024
 ------------------------------------------------------------------------------
 
 module Observe
@@ -17,15 +17,17 @@ module Observe
    oEither,
    oFun, (~>), oFunFG, (~~>), oFunG, (~~~>),
    o0,o1,o2,o3,o4,o5,
-   clearLogFile,
+   clearLogFile, ensureCoosyLogDir,
    Observer,
    derive
   )
  where
 
+import Control.Monad    ( unless, when )
 import System.IO.Unsafe ( isVar, spawnConstraint, unsafePerformIO )
 
 import Data.Global      ( GlobalT, globalT, readGlobalT, writeGlobalT )
+import System.Directory ( createDirectory, doesDirectoryExist )
 import System.Process   ( system )
 
 import Coosy.Derive     ( derive )
@@ -325,12 +327,20 @@ clearLogFile = do
    writeGlobalT globalEventID 0
 
 clearFileCheck :: IO ()
-clearFileCheck =
-  let clearFile = logFileClear in
-   readFile clearFile >>= \clearStr ->
-   if clearStr == "1"
-     then do writeGlobalT globalEventID 0
-             writeFile clearFile ""
-     else return ()
+clearFileCheck = do
+  ensureCoosyLogDir
+  clearStr <- readFile logFileClear
+  when (clearStr == "1") $ do
+    writeGlobalT globalEventID 0
+    writeFile logFileClear ""
+
+-- Create the directory for storing Coosy log files if it does not exist.
+ensureCoosyLogDir :: IO ()
+ensureCoosyLogDir = do
+  logexist <- doesDirectoryExist logDir
+  unless logexist $ do
+    putStrLn $ ">>> Creating new directory '"++logDir++"' for Coosy log files"
+    createDirectory logDir
+    writeFile logFileClear ""
 
 ------------------------------------------------------------------------------

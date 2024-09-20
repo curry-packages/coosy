@@ -4,11 +4,10 @@
 
 module Coosy.GUI (main) where
 
-import System.Directory
-import System.FilePath  ( (</>) )
+import System.FilePath     ( (</>) )
 import Graphics.UI
 
-import Observe             ( clearLogFile )
+import Observe             ( clearLogFile, ensureCoosyLogDir )
 import Coosy.ShowObserve   ( readAndPrintEvents, ViewConf(..) )
 import Coosy.Trace         ( logDir, logFileClear )
 import Coosy.Derive        ( deriveFile )
@@ -18,13 +17,7 @@ import Coosy.PackageConfig ( packagePath )
 
 main :: IO ()
 main = do
-  logexist <- doesDirectoryExist logDir
-  if logexist
-    then return ()
-    else do
-      putStrLn $ ">>> Creating new directory '"++logDir++"' for Coosy log files"
-      createDirectory logDir
-      writeFile logFileClear ""
+  ensureCoosyLogDir
   -- write path info for PAKCS:
   writeFile (logDir </> "SRCPATH") (packagePath </> "src\n")
   writeFile (logDir </> "READY") "" -- for synchronization with PAKCS
