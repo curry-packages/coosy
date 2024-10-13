@@ -1,9 +1,32 @@
 COOSy (Curry Object Observation System)
 =======================================
 
-This package contains the implementation of a tool to observe
-the execution of programs written
-in the declarative multi-paradigm language Curry
+# Overview
+
+COOSy is an implementation of a lightweight approach
+for debugging functional logic programs written in Curry by observations.
+It consists of a library plus a viewing tool.
+Programmers can annotate their program with observation functions for data
+structures and functions which may both contain or be applied to logical
+variables.
+The parts of observed objects that are evaluated during the execution are
+recorded in a trace file and can be viewed by means of a pretty printer
+integrated in a graphical user interface.
+The tool covers all aspects of modern functional logic
+multiparadigm languages such as lazy evaluation, higher order functions,
+non-deterministic search, logic variables, concurrency and constraints.
+
+# Implementation
+
+The implementation of COOSy is freely available and an interface to COOSy
+is integrated in the distribution of the Curry programming environment
+<a href="https://www.informatik.uni-kiel.de/~pakcs">PAKCS</a>.
+To use COOSy in PAKCS, the implementation must be installed locally,
+which can be done by installing this package with the command
+
+    cypm install coosy
+
+# Documentation
 
 Details about COOSy and its implementation can be found in
 this paper:
@@ -14,6 +37,9 @@ Proc. of the Sixth International Symposium on
 Practical Aspects of Declarative Languages (PADL'04),
 Springer LNCS 3057, pp. 193-208, 2004
 
+There are also
+[slides about COOSy](http://www.informatik.uni-kiel.de/~mh/slides/PADL04.pdf)
+which has been presented at PADL 2004.
 
 # Important note
 
@@ -58,6 +84,6 @@ Developed by
  * Frank Huch    (CAU Kiel, Germany, fhu@informatik.uni-kiel.de)
 
 
-Version of February 27, 2023
+Version of September 20, 2024
 
 -------------------------------------------------------------------------
