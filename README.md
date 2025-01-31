@@ -20,7 +20,7 @@ non-deterministic search, logic variables, concurrency and constraints.
 
 The implementation of COOSy is freely available and an interface to COOSy
 is integrated in the distribution of the Curry programming environment
-<a href="https://www.informatik.uni-kiel.de/~pakcs">PAKCS</a>.
+[PAKCS](https://www.curry-lang.org/pakcs).
 To use COOSy in PAKCS, the implementation must be installed locally,
 which can be done by installing this package with the command
 
