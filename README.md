@@ -38,7 +38,7 @@ Practical Aspects of Declarative Languages (PADL'04),
 Springer LNCS 3057, pp. 193-208, 2004
 
 There are also
-[slides about COOSy](http://www.informatik.uni-kiel.de/~mh/slides/PADL04.pdf)
+[slides about COOSy](https://www.michaelhanus.de/slides/PADL04.pdf)
 which has been presented at PADL 2004.
 
 # Important note
