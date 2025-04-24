@@ -66,7 +66,7 @@ might return a free variable, whereas
     (oList oInt ~~> oList oInt ~~> oInt)
 
 observe functions which are possibly invoked with free variables but
-return a non-free results and
+return non-free results and
 
     (oList oInt ~~~> oList oInt ~~~> oMaybe oInt)
 
