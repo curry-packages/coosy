@@ -39,7 +39,7 @@ Springer LNCS 3057, pp. 193-208, 2004
 
 There are also
 [slides about COOSy](https://www.michaelhanus.de/slides/PADL04.pdf)
-which has been presented at PADL 2004.
+which have been presented at PADL 2004.
 
 # Important note
 
@@ -78,11 +78,10 @@ The `examples` directory contains various programs containing observers.
 -------------------------------------------------------------------------
 Developed by
 
- * Bernd Brassel (CAU Kiel, Germany, bbr@informatik.uni-kiel.de)
- * Olaf Chitil   (University of Kent, UK, O.Chitil@kent.ac.uk)
- * Michael Hanus (CAU Kiel, Germany, mh@informatik.uni-kiel.de)
- * Frank Huch    (CAU Kiel, Germany, fhu@informatik.uni-kiel.de)
-
+* Bernd Brassel (CAU Kiel, Germany, bbr@informatik.uni-kiel.de)
+* Olaf Chitil   (University of Kent, UK, O.Chitil@kent.ac.uk)
+* Michael Hanus (CAU Kiel, Germany, mh@informatik.uni-kiel.de)
+* Frank Huch    (CAU Kiel, Germany, fhu@informatik.uni-kiel.de)
 
 Version of September 20, 2024
 
